@@ -409,9 +409,9 @@ def handle_bid(data):
     next_bid = bid_amount + get_bid_increment(bid_amount)
     room = f"auction_{room_code}"
 
-    # Reset timer to 60 seconds on new bid
+    # Reset timer to 7 seconds on new bid for rapid-fire auction
     if room_code in auction_timers:
-        auction_timers[room_code]["seconds_left"] = 60
+        auction_timers[room_code]["seconds_left"] = 7
 
     # Broadcast the bid
     socketio.emit("bid_update", {
