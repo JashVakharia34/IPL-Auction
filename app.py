@@ -115,12 +115,16 @@ def auction_room(room_code, team_id):
 
 @app.route("/api/create-auction", methods=["POST"])
 def create_auction():
-    room_code = generate_room_code()
-    auction = seed_auction(db, Auction, Team, Player, room_code)
-    return jsonify({
-        "room_code": auction.room_code,
-        "admin_url": f"/admin/{auction.room_code}",
-    })
+    try:
+        room_code = generate_room_code()
+        auction = seed_auction(db, Auction, Team, Player, room_code)
+        return jsonify({
+            "room_code": auction.room_code,
+            "admin_url": f"/admin/{auction.room_code}",
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
 
 
 @app.route("/api/auction/<room_code>")
