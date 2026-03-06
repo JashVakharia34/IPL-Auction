@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from sqlalchemy.pool import NullPool
 
 # Load environment variables from .env file for local development
 load_dotenv()
@@ -23,3 +24,8 @@ class Config:
     
     # Ensure template changes are picked up immediately
     TEMPLATES_AUTO_RELOAD = True
+
+    # Disable connection pooling to avoid Eventlet greenlet lock issues with psycopg2
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'poolclass': NullPool
+    }
