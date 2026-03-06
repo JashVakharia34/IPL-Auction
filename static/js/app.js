@@ -293,6 +293,25 @@ function renderCurrentPlayer() {
     document.getElementById('playerSetBadge').textContent = `SET ${p.set_number}`;
     document.getElementById('roleIcon').textContent = ROLE_ICONS[p.role] || '🏏';
 
+    // Render Dynamic Stats
+    const statsGrid = document.getElementById('playerStatsGrid');
+    if (statsGrid) {
+        statsGrid.innerHTML = '';
+        if (p.stats && Object.keys(p.stats).length > 0) {
+            Object.entries(p.stats).forEach(([key, val]) => {
+                statsGrid.innerHTML += `
+                    <div class="stat-box">
+                        <div class="stat-value">${val}</div>
+                        <div class="stat-label">${key}</div>
+                    </div>
+                `;
+            });
+            statsGrid.style.display = 'grid';
+        } else {
+            statsGrid.style.display = 'none';
+        }
+    }
+
     updateBidDisplay();
     updateBidButton();
     updateTimer(60);

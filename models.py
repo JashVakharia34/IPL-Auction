@@ -48,6 +48,7 @@ class Player(db.Model):
     is_unsold = db.Column(db.Boolean, default=False)
     set_number = db.Column(db.Integer, default=1)
     image_url = db.Column(db.String(255), nullable=True)
+    stats_json = db.Column(db.Text, nullable=True)
 
     bids = db.relationship("Bid", backref="player", lazy=True)
 

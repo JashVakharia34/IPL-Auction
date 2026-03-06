@@ -14,6 +14,16 @@ from seed import seed_auction
 app = Flask(__name__)
 app.config.from_object(Config)
 db.init_app(app)
+
+# Auto-add the new stats_json column to existing databases
+with app.app_context():
+    try:
+        from sqlalchemy import text
+        db.session.execute(text("ALTER TABLE players ADD COLUMN stats_json TEXT"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 # Use eventlet in production (gunicorn), threading for local development
 if 'gunicorn' in sys.modules:
     async_mode = 'eventlet'
@@ -73,6 +83,14 @@ def get_bid_increment(current_amount):
 
 def get_player_data(player):
     """Serialize a player to dict."""
+    import json
+    stats = {}
+    if player.stats_json:
+        try:
+            stats = json.loads(player.stats_json)
+        except Exception:
+            pass
+            
     return {
         "id": player.id,
         "name": player.name,
@@ -82,10 +100,11 @@ def get_player_data(player):
         "base_price_formatted": format_price(player.base_price),
         "sold_price": player.sold_price,
         "sold_price_formatted": format_price(player.sold_price) if player.sold_price else None,
-        "team_id": player.team_id,
         "is_sold": player.is_sold,
         "is_unsold": player.is_unsold,
         "set_number": player.set_number,
+        "team_id": player.team_id,
+        "stats": stats,
     }
 
 

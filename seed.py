@@ -107,6 +107,9 @@ PLAYERS = [
 ]
 
 
+import json
+import random
+
 def seed_auction(db, Auction, Team, Player, room_code):
     """Create a new auction with teams and players."""
     auction = Auction(room_code=room_code, status="waiting")
@@ -126,15 +129,34 @@ def seed_auction(db, Auction, Team, Player, room_code):
         db.session.add(team)
 
     for pname, role, nationality, base_price, set_num in PLAYERS:
+        from typing import Any, Dict
+        # Generate realistic random stats based on role
+        stats: Dict[str, Any] = {"Matches": random.randint(30, 150)}
+        if role in ["BAT", "WK"]:
+            stats["Runs"] = random.randint(800, 4500)
+            stats["Avg"] = float(f"{random.uniform(25.0, 45.0):.2f}")
+            stats["SR"] = float(f"{random.uniform(120.0, 160.0):.2f}")
+        elif role == "BOWL":
+            stats["Wickets"] = random.randint(40, 150)
+            stats["Econ"] = float(f"{random.uniform(6.5, 9.5):.2f}")
+            stats["Avg"] = float(f"{random.uniform(18.0, 30.0):.2f}")
+        elif role == "AR":
+            stats["Runs"] = random.randint(500, 2500)
+            stats["SR"] = float(f"{random.uniform(130.0, 170.0):.2f}")
+            stats["Wickets"] = random.randint(30, 100)
+            stats["Econ"] = float(f"{random.uniform(7.0, 9.5):.2f}")
+
         player = Player(
             name=pname,
             role=role,
             nationality=nationality,
             base_price=base_price,
             set_number=set_num,
+            stats_json=json.dumps(stats),
             auction_id=auction.id,
         )
         db.session.add(player)
 
     db.session.commit()
     return auction
+
