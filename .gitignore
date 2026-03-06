@@ -1,0 +1,9 @@
+# IPL Auction
+*.db
+*.sqlite3
+__pycache__/
+*.pyc
+.env
+instance/
+venv/
+.venv/

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPL Auction — Live Room</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body class="auction-page">
+    <!-- Top Bar -->
+    <nav class="top-bar">
+        <div class="top-bar-left">
+            <span class="nav-logo">IPL <span>AUCTION</span></span>
+            <span class="room-badge" id="roomBadge">Room: {{ room_code }}</span>
+            <span class="status-badge" id="statusBadge">Waiting</span>
+        </div>
+        <div class="top-bar-right">
+            {% if is_admin %}
+            <span class="admin-badge">🎙️ AUCTIONEER</span>
+            {% else %}
+            <span class="team-badge" id="myTeamBadge"></span>
+            <span class="purse-badge" id="myPurseBadge"></span>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="auction-layout">
+        <!-- Left: Teams Panel -->
+        <aside class="teams-panel" id="teamsPanel">
+            <h3 class="panel-title">Teams</h3>
+            <div class="teams-list" id="teamsList"></div>
+        </aside>
+
+        <!-- Center: Main Stage -->
+        <main class="main-stage">
+            <!-- Waiting State -->
+            <div class="stage-waiting" id="stageWaiting">
+                <div class="waiting-content">
+                    <div class="waiting-icon">🏏</div>
+                    <h2>Waiting for auction to begin</h2>
+                    {% if is_admin %}
+                    <p>Connected teams will appear on the left. Press the button below when ready.</p>
+                    <button class="btn btn-primary btn-lg btn-glow" id="nextPlayerBtn">
+                        Start — Next Player ➜
+                        <span class="btn-shine"></span>
+                    </button>
+                    {% else %}
+                    <p>The auctioneer will start the bidding soon...</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Active Bidding State -->
+            <div class="stage-active" id="stageActive" style="display:none;">
+                <!-- Player Card -->
+                <div class="player-spotlight">
+                    <div class="player-card" id="playerCard">
+                        <div class="player-set-badge" id="playerSetBadge">SET 1</div>
+                        <div class="player-avatar" id="playerAvatar">
+                            <span class="role-icon" id="roleIcon">🏏</span>
+                        </div>
+                        <h2 class="player-name" id="playerName">Player Name</h2>
+                        <div class="player-meta">
+                            <span class="player-role" id="playerRole">BAT</span>
+                            <span class="player-nationality" id="playerNationality">IND</span>
+                        </div>
+                        <div class="player-base-price" id="playerBasePrice">Base: ₹2 Cr</div>
+                    </div>
+                </div>
+
+                <!-- Timer & Bid Section -->
+                <div class="bid-section">
+                    <!-- Timer -->
+                    <div class="timer-container">
+                        <svg class="timer-ring" viewBox="0 0 120 120" id="timerRing">
+                            <circle class="timer-bg" cx="60" cy="60" r="54" />
+                            <circle class="timer-progress" cx="60" cy="60" r="54" id="timerProgress"
+                                stroke-dasharray="339.292" stroke-dashoffset="0" />
+                        </svg>
+                        <div class="timer-text" id="timerText">60</div>
+                    </div>
+
+                    <!-- Current Bid Display -->
+                    <div class="current-bid" id="currentBidSection">
+                        <div class="bid-label">Current Bid</div>
+                        <div class="bid-amount" id="currentBidAmount">—</div>
+                        <div class="bid-team" id="currentBidTeam"></div>
+                    </div>
+
+                    <!-- Bid Button (for team owners) -->
+                    {% if not is_admin %}
+                    <button class="btn btn-bid btn-glow" id="bidBtn" disabled>
+                        <span class="bid-btn-label">Place Bid</span>
+                        <span class="bid-btn-amount" id="bidBtnAmount">₹2 Cr</span>
+                        <span class="btn-shine"></span>
+                    </button>
+                    {% endif %}
+
+                    {% if is_admin %}
+                    <div class="admin-controls">
+                        <button class="btn btn-warning" id="pauseBtn">⏸ Pause</button>
+                        <button class="btn btn-success" id="resumeBtn" style="display:none;">▶ Resume</button>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Bid Feed -->
+                <div class="bid-feed" id="bidFeed">
+                    <h4 class="feed-title">Bid History</h4>
+                    <div class="feed-list" id="feedList"></div>
+                </div>
+            </div>
+
+            <!-- Sold/Unsold Overlay -->
+            <div class="sold-overlay" id="soldOverlay" style="display:none;">
+                <div class="sold-card" id="soldCard">
+                    <div class="sold-label" id="soldLabel">SOLD!</div>
+                    <div class="sold-player" id="soldPlayer"></div>
+                    <div class="sold-details" id="soldDetails"></div>
+                    {% if is_admin %}
+                    <button class="btn btn-primary btn-lg btn-glow" id="nextAfterSold">
+                        Next Player ➜
+                        <span class="btn-shine"></span>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Auction Complete -->
+            <div class="stage-complete" id="stageComplete" style="display:none;">
+                <div class="complete-content">
+                    <div class="complete-icon">🏆</div>
+                    <h2>Auction Complete!</h2>
+                    <p>All players have been auctioned.</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right: Player Pool -->
+        <aside class="players-panel" id="playersPanel">
+            <h3 class="panel-title">Player Pool</h3>
+            <div class="set-tabs" id="setTabs">
+                <button class="set-tab active" data-set="1">Set 1</button>
+                <button class="set-tab" data-set="2">Set 2</button>
+                <button class="set-tab" data-set="3">Set 3</button>
+                <button class="set-tab" data-set="4">Set 4</button>
+            </div>
+            <div class="players-list" id="playersList"></div>
+        </aside>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="/static/js/app.js?v={{ range(1, 1000000) | random }}"></script>
+    <div id="auction-data" data-room-code="{{ room_code }}" data-is-admin="{{ 'true' if is_admin else 'false' }}"
+        data-team-id="{{ team_id if team_id else 'null' }}" style="display: none;">
+    </div>
+    <script>
+        const dataDiv = document.getElementById('auction-data');
+        window.AUCTION_CONFIG = {
+            roomCode: dataDiv.dataset.roomCode,
+            isAdmin: dataDiv.dataset.isAdmin === 'true',
+            teamId: dataDiv.dataset.teamId === 'null' ? null : dataDiv.dataset.teamId
+        };
+        initAuction(window.AUCTION_CONFIG);
+    </script>
+</body>
+
+</html>

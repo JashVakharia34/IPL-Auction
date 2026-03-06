@@ -1,0 +1,7 @@
+{
+    "python.defaultInterpreterPath": "c:\\Users\\jashv\\OneDrive\\Desktop\\IPL Auction\\.venv\\Scripts\\python.exe",
+    "python.analysis.extraPaths": [
+        "c:\\Users\\jashv\\OneDrive\\Desktop\\IPL Auction",
+        "c:\\Users\\jashv\\OneDrive\\Desktop\\IPL Auction\\.venv\\Lib\\site-packages"
+    ]
+}

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPL Auction 2026 — Live Bidding</title>
+    <meta name="description" content="Live IPL-style cricket auction with real-time bidding">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="landing-page">
+    <div class="bg-particles" id="particles"></div>
+    
+    <div class="landing-container">
+        <header class="landing-header">
+            <div class="logo-glow">
+                <h1 class="logo-text">
+                    <span class="logo-ipl">IPL</span>
+                    <span class="logo-auction">AUCTION</span>
+                    <span class="logo-year">2026</span>
+                </h1>
+            </div>
+            <p class="tagline">Live Cricket Auction Experience</p>
+        </header>
+
+        <div class="landing-cards">
+            <!-- Create Auction Card -->
+            <div class="action-card admin-card" id="createCard">
+                <div class="card-icon">🎙️</div>
+                <h2>Auctioneer</h2>
+                <p>Create a new auction room and control the bidding flow</p>
+                <button class="btn btn-primary btn-glow" id="createBtn">
+                    Create Auction
+                    <span class="btn-shine"></span>
+                </button>
+            </div>
+
+            <!-- Join Auction Card -->
+            <div class="action-card team-card" id="joinCard">
+                <div class="card-icon">🏏</div>
+                <h2>Team Owner</h2>
+                <p>Join an existing auction and bid on your dream squad</p>
+                <form id="joinForm" class="join-form">
+                    <input type="text" id="roomCodeInput" placeholder="Enter Room Code" 
+                           maxlength="6" class="input-styled" autocomplete="off" required>
+                    <button type="submit" class="btn btn-secondary btn-glow">
+                        Join Auction
+                        <span class="btn-shine"></span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Team Selection Modal -->
+        <div class="modal-overlay" id="teamModal" style="display:none;">
+            <div class="modal-content">
+                <h2>Select Your Team</h2>
+                <p class="modal-subtitle" id="modalRoomCode"></p>
+                <div class="team-grid" id="teamGrid"></div>
+                <button class="btn btn-ghost" id="closeModal">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const createBtn = document.getElementById('createBtn');
+        const joinForm = document.getElementById('joinForm');
+        const roomCodeInput = document.getElementById('roomCodeInput');
+        const teamModal = document.getElementById('teamModal');
+        const teamGrid = document.getElementById('teamGrid');
+        const modalRoomCode = document.getElementById('modalRoomCode');
+        const closeModal = document.getElementById('closeModal');
+
+        // Particles
+        const particlesEl = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDelay = Math.random() * 8 + 's';
+            p.style.animationDuration = (6 + Math.random() * 8) + 's';
+            particlesEl.appendChild(p);
+        }
+
+        createBtn.addEventListener('click', async () => {
+            createBtn.disabled = true;
+            createBtn.textContent = 'Creating...';
+            try {
+                const res = await fetch('/api/create-auction', { method: 'POST' });
+                const data = await res.json();
+                window.location.href = data.admin_url;
+            } catch (err) {
+                alert('Failed to create auction');
+                createBtn.disabled = false;
+                createBtn.textContent = 'Create Auction';
+            }
+        });
+
+        joinForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = roomCodeInput.value.trim().toUpperCase();
+            if (!code) return;
+
+            try {
+                const res = await fetch(`/api/auction/${code}`);
+                if (!res.ok) throw new Error('Not found');
+                const data = await res.json();
+
+                modalRoomCode.textContent = `Room: ${code}`;
+                teamGrid.innerHTML = '';
+
+                data.teams.forEach(team => {
+                    const card = document.createElement('div');
+                    card.className = 'team-select-card';
+                    card.style.setProperty('--team-color', team.color);
+                    card.innerHTML = `
+                        <div class="team-emoji">${team.logo_emoji}</div>
+                        <div class="team-name">${team.name}</div>
+                        <div class="team-status ${team.is_connected ? 'taken' : 'available'}">
+                            ${team.is_connected ? '🔴 Taken' : '🟢 Available'}
+                        </div>
+                    `;
+                    if (!team.is_connected) {
+                        card.addEventListener('click', () => {
+                            window.location.href = `/auction/${code}/${team.id}`;
+                        });
+                    } else {
+                        card.classList.add('disabled');
+                    }
+                    teamGrid.appendChild(card);
+                });
+
+                teamModal.style.display = 'flex';
+            } catch (err) {
+                alert('Auction not found! Check the room code.');
+            }
+        });
+
+        closeModal.addEventListener('click', () => {
+            teamModal.style.display = 'none';
+        });
+
+        teamModal.addEventListener('click', (e) => {
+            if (e.target === teamModal) teamModal.style.display = 'none';
+        });
+
+        // Auto-uppercase room code
+        roomCodeInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase();
+        });
+    </script>
+</body>
+</html>
