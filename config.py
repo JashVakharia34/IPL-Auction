@@ -9,6 +9,10 @@ load_dotenv()
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'super-secret-ipl-key-2026'
     
+    # Authentication
+    AUCTIONEER_PASSWORD = os.environ.get('AUCTIONEER_PASSWORD') or 'ipl2026admin'
+    TEAM_PASSWORD = os.environ.get('TEAM_PASSWORD') or 'bidder2026'
+    
     # Database
     # Default to a local SQLite database if DATABASE_URL is not set (e.g. for local dev)
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')

@@ -3,8 +3,9 @@ import sys
 import string
 import random
 from datetime import datetime
+from functools import wraps
 from typing import Any, Dict
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from config import Config
 from models import db, Auction, Team, Player, Bid
@@ -22,6 +23,25 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode=async_mode)
 
 # In-memory auction state for timers
 auction_timers: Dict[str, Dict[str, Any]] = {}
+
+# ─── MIDDLEWARE DEFINITIONS ───
+
+def auctioneer_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('role') != 'auctioneer':
+            return redirect(url_for('index', error='Unauthorized: Auctioneer access required'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def team_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('role') not in ['team', 'auctioneer']:
+            return redirect(url_for('index', error='Unauthorized: Team access required'))
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 
 def generate_room_code():
@@ -91,10 +111,47 @@ def get_team_data(team):
 
 @app.route("/")
 def index():
+    # If already logged in, redirect to respective dashboard
+    if session.get('role') == 'auctioneer':
+        return redirect(url_for('auctioneer_dashboard'))
+    elif session.get('role') == 'team':
+        return redirect(url_for('team_dashboard'))
     return render_template("index.html")
+
+@app.route("/api/login", methods=["POST"])
+def login():
+    data = request.json
+    role = data.get("role")
+    password = data.get("password")
+    
+    if role == "auctioneer" and password == app.config["AUCTIONEER_PASSWORD"]:
+        session["role"] = "auctioneer"
+        return jsonify({"success": True, "redirect": url_for("auctioneer_dashboard")})
+    elif role == "team" and password == app.config["TEAM_PASSWORD"]:
+        session["role"] = "team"
+        return jsonify({"success": True, "redirect": url_for("team_dashboard")})
+    
+    return jsonify({"success": False, "message": "Invalid password"}), 401
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("index"))
+
+@app.route("/auctioneer")
+@auctioneer_required
+def auctioneer_dashboard():
+    active_auctions = Auction.query.order_by(Auction.created_at.desc()).all()
+    return render_template("auctioneer_dashboard.html", auctions=active_auctions)
+
+@app.route("/team")
+@team_required
+def team_dashboard():
+    return render_template("team_dashboard.html")
 
 
 @app.route("/admin/<room_code>")
+@auctioneer_required
 def admin_panel(room_code):
     auction = Auction.query.filter_by(room_code=room_code).first()
     if not auction:
@@ -103,6 +160,7 @@ def admin_panel(room_code):
 
 
 @app.route("/auction/<room_code>/<int:team_id>")
+@team_required
 def auction_room(room_code, team_id):
     auction = Auction.query.filter_by(room_code=room_code).first()
     if not auction:
@@ -114,6 +172,7 @@ def auction_room(room_code, team_id):
 
 
 @app.route("/api/create-auction", methods=["POST"])
+@auctioneer_required
 def create_auction():
     try:
         room_code = generate_room_code()

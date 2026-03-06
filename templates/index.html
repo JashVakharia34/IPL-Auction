@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPL Auction 2026 — Live Bidding</title>
-    <meta name="description" content="Live IPL-style cricket auction with real-time bidding">
+    <title>IPL Auction 2026 — Login</title>
+    <meta name="description" content="Login to the IPL Cricket Auction">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
+
 <body class="landing-page">
     <div class="bg-particles" id="particles"></div>
-    
+
     <div class="landing-container">
         <header class="landing-header">
             <div class="logo-glow">
@@ -21,57 +24,52 @@
                     <span class="logo-year">2026</span>
                 </h1>
             </div>
-            <p class="tagline">Live Cricket Auction Experience</p>
+            <p class="tagline">Authentication Portal</p>
+            {% if request.args.get('error') %}
+            <div class="error-banner"
+                style="background: rgba(255, 0,0,0.2); color: #ff5252; padding: 10px; border-radius: 8px; margin-top: 20px; text-align: center; border: 1px solid #ff5252;">
+                {{ request.args.get('error') }}
+            </div>
+            {% endif %}
         </header>
 
         <div class="landing-cards">
-            <!-- Create Auction Card -->
-            <div class="action-card admin-card" id="createCard">
+            <!-- Auctioneer Login Card -->
+            <div class="action-card admin-card">
                 <div class="card-icon">🎙️</div>
                 <h2>Auctioneer</h2>
-                <p>Create a new auction room and control the bidding flow</p>
-                <button class="btn btn-primary btn-glow" id="createBtn">
-                    Create Auction
-                    <span class="btn-shine"></span>
-                </button>
-            </div>
-
-            <!-- Join Auction Card -->
-            <div class="action-card team-card" id="joinCard">
-                <div class="card-icon">🏏</div>
-                <h2>Team Owner</h2>
-                <p>Join an existing auction and bid on your dream squad</p>
-                <form id="joinForm" class="join-form">
-                    <input type="text" id="roomCodeInput" placeholder="Enter Room Code" 
-                           maxlength="6" class="input-styled" autocomplete="off" required>
-                    <button type="submit" class="btn btn-secondary btn-glow">
-                        Join Auction
+                <p>Login to manage auction rooms and control the bidding flow</p>
+                <form id="auctioneerForm" class="join-form">
+                    <input type="password" id="auctioneerPassword" placeholder="Admin Password" class="input-styled"
+                        required>
+                    <button type="submit" class="btn btn-primary btn-glow" id="auctioneerLoginBtn">
+                        Login as Admin
                         <span class="btn-shine"></span>
                     </button>
+                    <p class="error-text" id="auctioneerError"
+                        style="color: #ff5252; font-size: 0.9rem; margin-top: 10px; display: none;"></p>
                 </form>
             </div>
-        </div>
 
-        <!-- Team Selection Modal -->
-        <div class="modal-overlay" id="teamModal" style="display:none;">
-            <div class="modal-content">
-                <h2>Select Your Team</h2>
-                <p class="modal-subtitle" id="modalRoomCode"></p>
-                <div class="team-grid" id="teamGrid"></div>
-                <button class="btn btn-ghost" id="closeModal">Cancel</button>
+            <!-- Team Login Card -->
+            <div class="action-card team-card">
+                <div class="card-icon">🏏</div>
+                <h2>Team Owner</h2>
+                <p>Login to join a room and bid on your dream squad</p>
+                <form id="teamForm" class="join-form">
+                    <input type="password" id="teamPassword" placeholder="Team Password" class="input-styled" required>
+                    <button type="submit" class="btn btn-secondary btn-glow" id="teamLoginBtn">
+                        Login as Team
+                        <span class="btn-shine"></span>
+                    </button>
+                    <p class="error-text" id="teamError"
+                        style="color: #ff5252; font-size: 0.9rem; margin-top: 10px; display: none;"></p>
+                </form>
             </div>
         </div>
     </div>
 
     <script>
-        const createBtn = document.getElementById('createBtn');
-        const joinForm = document.getElementById('joinForm');
-        const roomCodeInput = document.getElementById('roomCodeInput');
-        const teamModal = document.getElementById('teamModal');
-        const teamGrid = document.getElementById('teamGrid');
-        const modalRoomCode = document.getElementById('modalRoomCode');
-        const closeModal = document.getElementById('closeModal');
-
         // Particles
         const particlesEl = document.getElementById('particles');
         for (let i = 0; i < 30; i++) {
@@ -83,72 +81,48 @@
             particlesEl.appendChild(p);
         }
 
-        createBtn.addEventListener('click', async () => {
-            createBtn.disabled = true;
-            createBtn.textContent = 'Creating...';
-            try {
-                const res = await fetch('/api/create-auction', { method: 'POST' });
-                const data = await res.json();
-                window.location.href = data.admin_url;
-            } catch (err) {
-                alert('Failed to create auction');
-                createBtn.disabled = false;
-                createBtn.textContent = 'Create Auction';
-            }
-        });
-
-        joinForm.addEventListener('submit', async (e) => {
+        async function handleLogin(e, role, passwordId, errorId, btnId) {
             e.preventDefault();
-            const code = roomCodeInput.value.trim().toUpperCase();
-            if (!code) return;
+            const password = document.getElementById(passwordId).value;
+            const errorEl = document.getElementById(errorId);
+            const btn = document.getElementById(btnId);
+
+            btn.disabled = true;
+            btn.textContent = 'Authenticating...';
+            errorEl.style.display = 'none';
 
             try {
-                const res = await fetch(`/api/auction/${code}`);
-                if (!res.ok) throw new Error('Not found');
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ role, password })
+                });
                 const data = await res.json();
 
-                modalRoomCode.textContent = `Room: ${code}`;
-                teamGrid.innerHTML = '';
-
-                data.teams.forEach(team => {
-                    const card = document.createElement('div');
-                    card.className = 'team-select-card';
-                    card.style.setProperty('--team-color', team.color);
-                    card.innerHTML = `
-                        <div class="team-emoji">${team.logo_emoji}</div>
-                        <div class="team-name">${team.name}</div>
-                        <div class="team-status ${team.is_connected ? 'taken' : 'available'}">
-                            ${team.is_connected ? '🔴 Taken' : '🟢 Available'}
-                        </div>
-                    `;
-                    if (!team.is_connected) {
-                        card.addEventListener('click', () => {
-                            window.location.href = `/auction/${code}/${team.id}`;
-                        });
-                    } else {
-                        card.classList.add('disabled');
-                    }
-                    teamGrid.appendChild(card);
-                });
-
-                teamModal.style.display = 'flex';
+                if (data.success) {
+                    window.location.href = data.redirect;
+                } else {
+                    errorEl.textContent = data.message || 'Login failed';
+                    errorEl.style.display = 'block';
+                    btn.disabled = false;
+                    btn.textContent = role === 'auctioneer' ? 'Login as Admin' : 'Login as Team';
+                }
             } catch (err) {
-                alert('Auction not found! Check the room code.');
+                errorEl.textContent = 'Network error. Please try again.';
+                errorEl.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = role === 'auctioneer' ? 'Login as Admin' : 'Login as Team';
             }
+        }
+
+        document.getElementById('auctioneerForm').addEventListener('submit', (e) => {
+            handleLogin(e, 'auctioneer', 'auctioneerPassword', 'auctioneerError', 'auctioneerLoginBtn');
         });
 
-        closeModal.addEventListener('click', () => {
-            teamModal.style.display = 'none';
-        });
-
-        teamModal.addEventListener('click', (e) => {
-            if (e.target === teamModal) teamModal.style.display = 'none';
-        });
-
-        // Auto-uppercase room code
-        roomCodeInput.addEventListener('input', (e) => {
-            e.target.value = e.target.value.toUpperCase();
+        document.getElementById('teamForm').addEventListener('submit', (e) => {
+            handleLogin(e, 'team', 'teamPassword', 'teamError', 'teamLoginBtn');
         });
     </script>
 </body>
+
 </html>

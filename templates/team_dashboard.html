@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPL Auction 2026 — Team Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .dashboard-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 50px;
+        }
+
+        .stat-card {
+            background: rgba(26, 26, 46, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-card h2 {
+            margin: 0 0 10px 0;
+            color: #D4A843;
+        }
+
+        .team-grid {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+
+<body class="landing-page" style="justify-content: flex-start; overflow-y: auto;">
+    <div class="bg-particles" id="particles"></div>
+
+    <div class="dashboard-container">
+        <header class="dashboard-header">
+            <div class="logo-glow" style="transform: scale(0.7); transform-origin: left;">
+                <h1 class="logo-text">
+                    <span class="logo-ipl">IPL</span>
+                    <span class="logo-auction">AUCTION</span>
+                </h1>
+            </div>
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <span style="color: #aaa;">Signed in as <strong>Team Owner</strong></span>
+                <a href="/logout" class="btn btn-ghost" style="padding: 8px 16px; font-size: 0.9rem;">Logout</a>
+            </div>
+        </header>
+
+        <div class="stat-card">
+            <h2>Join Live Auction</h2>
+            <p style="color: #aaa; margin-bottom: 25px;">Enter the Room Code provided by your Auctioneer to connect.</p>
+
+            <form id="joinForm" class="join-form" style="max-width: 400px; margin: 0 auto;">
+                <input type="text" id="roomCodeInput" placeholder="Enter Room Code (e.g. A1B2C3)" maxlength="6"
+                    class="input-styled" autocomplete="off" required>
+                <button type="submit" class="btn btn-secondary btn-glow" id="searchBtn">
+                    Find Room
+                    <span class="btn-shine"></span>
+                </button>
+            </form>
+
+            <div id="loading" style="display: none; color: #D4A843; margin-top: 20px;">Searching...</div>
+            <div id="errorMsg" style="display: none; color: #ff5252; margin-top: 20px;"></div>
+        </div>
+
+        <!-- Team Selection Modal logic is now just injected below the search -->
+        <div id="teamSelectionArea" style="display: none; margin-top: 40px;">
+            <h3 style="border-bottom: 2px solid rgba(255,255,255,0.1); padding-bottom: 15px;">
+                Available Franchises for <span id="currentRoomText" style="color: #D4A843;"></span>
+            </h3>
+            <p style="color: #aaa; font-size: 0.9rem; margin-top: 10px;">Select an available franchise to claim it for
+                this session.</p>
+            <div class="team-grid" id="teamGrid"></div>
+        </div>
+    </div>
+
+    <script>
+        const particlesEl = document.getElementById('particles');
+        for (let i = 0; i < 30; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDelay = Math.random() * 8 + 's';
+            p.style.animationDuration = (6 + Math.random() * 8) + 's';
+            particlesEl.appendChild(p);
+        }
+
+        const joinForm = document.getElementById('joinForm');
+        const searchBtn = document.getElementById('searchBtn');
+        const roomCodeInput = document.getElementById('roomCodeInput');
+        const teamSelectionArea = document.getElementById('teamSelectionArea');
+        const teamGrid = document.getElementById('teamGrid');
+        const currentRoomText = document.getElementById('currentRoomText');
+        const loading = document.getElementById('loading');
+        const errorMsg = document.getElementById('errorMsg');
+
+        // Auto-uppercase room code
+        roomCodeInput.addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase();
+        });
+
+        joinForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const code = roomCodeInput.value.trim().toUpperCase();
+            if (!code) return;
+
+            searchBtn.disabled = true;
+            loading.style.display = 'block';
+            errorMsg.style.display = 'none';
+            teamSelectionArea.style.display = 'none';
+
+            try {
+                const res = await fetch(`/api/auction/${code}`);
+                if (!res.ok) throw new Error('Auction Room not found or is no longer active.');
+                const data = await res.json();
+
+                currentRoomText.textContent = `Room ${code}`;
+                teamGrid.innerHTML = '';
+
+                data.teams.forEach(team => {
+                    const card = document.createElement('div');
+                    card.className = 'team-select-card';
+                    card.style.setProperty('--team-color', team.color);
+                    card.innerHTML = `
+                        <div class="team-emoji">${team.logo_emoji}</div>
+                        <div class="team-name">${team.name}</div>
+                        <div class="team-status ${team.is_connected ? 'taken' : 'available'}">
+                            ${team.is_connected ? '🔴 Taken' : '🟢 Claim Team'}
+                        </div>
+                    `;
+                    if (!team.is_connected) {
+                        card.addEventListener('click', () => {
+                            window.location.href = `/auction/${code}/${team.id}`;
+                        });
+                    } else {
+                        card.classList.add('disabled');
+                        card.style.opacity = '0.5';
+                        card.style.cursor = 'not-allowed';
+                    }
+                    teamGrid.appendChild(card);
+                });
+
+                loading.style.display = 'none';
+                teamSelectionArea.style.display = 'block';
+                searchBtn.disabled = false;
+            } catch (err) {
+                loading.style.display = 'none';
+                errorMsg.textContent = err.message;
+                errorMsg.style.display = 'block';
+                searchBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>
